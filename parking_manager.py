@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 import csv
-from typing import Optional
+from typing import Optional, Tuple, List, Dict
 import sqlite3
 from fpdf import FPDF # Importar FPDF
 import os # Necesario para crear el directorio de facturas
@@ -16,14 +16,11 @@ class ParkingManager:
         self.conn = sqlite3.connect(self.db_name, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._create_tables()
-        # Formateador para mostrar fechas y horas de forma legible.
         self.date_format_str: str = "%d/%m/%Y %H:%M:%S"
-        # Información del Parking para las facturas
         self.parking_name: str = "Parking Central"
         self.parking_address: str = "Cto Juan Pablo II 2457, La Hacienda, 72570 Heroica Puebla de Zaragoza, Pue., México"
         self.parking_nif: str = "B12345678"
         self.invoices_dir: str = "invoices"
-        # Crear el directorio de facturas si no existe
         os.makedirs(self.invoices_dir, exist_ok=True)
         self.capacity = capacity
 
@@ -62,11 +59,14 @@ class ParkingManager:
             print(f"Error: Tipo de vehículo desconocido '{vehicle_type_name}' en la base de datos para la matrícula {plate}.")
             return None
         
-    def check_capacity(self) -> bool: # Utilizado por Flask
+    def check_capacity(self) -> bool:
+        """Verifica si hay capacidad disponible en el parking."""
         self.cursor.execute("SELECT COUNT(*) FROM parked_vehicles")
         current_count = self.cursor.fetchone()[0]
         return not current_count >= self.capacity
-    def check_in_vehicle(self, plate: str, vehicle_type: VehicleType) -> str: # Modificado para Flask
+
+    def check_in_vehicle(self, plate: str, vehicle_type: VehicleType) -> str:
+        """Registra la entrada de un vehículo."""
         self.cursor.execute("SELECT plate FROM parked_vehicles WHERE plate = ?", (plate,))
         if self.cursor.fetchone():
             return f"Error: El vehículo con matrícula {plate} ya está en el parking."
@@ -86,13 +86,12 @@ class ParkingManager:
 
     def _generate_invoice_pdf(self, filepath: str, vehicle: Vehicle, fee: float, check_in_dt: datetime, check_out_dt: datetime, duration_minutes: int) -> bool:
         """
-        Genera una factura en formato PDF y la guarda en la ruta especificada.
-        Devuelve True si se generó correctamente, False en caso contrario.
+        Genera una factura PDF.
         """
         pdf = FPDF()
         pdf.add_page()
         euro_symbol = chr(128) # Símbolo del Euro para FPDF con fuentes estándar
-
+        
         # Encabezado de la Factura
         pdf.set_font("Arial", "B", 16)
         pdf.cell(0, 10, "FACTURA SIMPLIFICADA", 0, 1, "C")
@@ -112,10 +111,8 @@ class ParkingManager:
 
         # Detalles del Servicio
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 6, "DETALLES DEL SERVICIO:", 0, 1)
+        pdf.cell(0, 6, "DETALLES DEL SERVICIO:", 0, 1) # TODO: Considerar parametrizar cliente y empleado
         pdf.set_font("Arial", "", 11)
-        pdf.cell(0, 6, "Cliente: José Luis Ábalos", 0, 1)
-        pdf.cell(0, 6, "Empleada: Jessica Rodríguez", 0, 1)
         pdf.cell(0, 6, f"Vehículo Matrícula: {vehicle.plate}", 0, 1)
         pdf.cell(0, 6, f"Tipo de Vehículo:   {vehicle.type.name}", 0, 1)
         pdf.ln(3)
@@ -144,14 +141,12 @@ class ParkingManager:
             print(f"Error al generar el PDF de la factura {filepath}: {e}")
             return False
 
-    def check_out_vehicle(self, plate: str) -> tuple[str, Optional[float], Optional[str]]:
+    def check_out_vehicle(self, plate: str) -> Tuple[str, Optional[float], Optional[str]]:
         """
-        Registra la salida de un vehículo del aparcamiento.
-        Calcula la duración de la estancia y el coste.
+        Registra la salida de un vehículo, calcula coste y genera factura.
         Args:
             plate: La matrícula del vehículo a retirar.
         Returns:
-            El objeto Vehicle que ha salido, o None si no se encontró el vehículo.
             Una tupla: (mensaje_resultado, tarifa_calculada, nombre_archivo_factura_generada)
         """
         self.cursor.execute("SELECT plate, vehicle_type_name, check_in_time FROM parked_vehicles WHERE plate = ?", (plate,))
@@ -166,7 +161,7 @@ class ParkingManager:
             vehicle_type_enum = VehicleType[db_vehicle_type_name]
         except KeyError:
             error_msg = f"Error: Tipo de vehículo desconocido '{db_vehicle_type_name}' para la matrícula {db_plate} al salir."
-            print(error_msg) # Para la consola
+            print(error_msg) # Log para consola/servidor
             return error_msg, None, None
 
         current_check_out_time = int(time.time() * 1000)
@@ -195,17 +190,15 @@ class ParkingManager:
             )
 
             # Generar y guardar la factura
-            invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.pdf" # Cambiar extensión a .pdf
+            invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.pdf"
             invoice_filepath = os.path.join(self.invoices_dir, invoice_filename)
-            generated_invoice_name = None # Para almacenar el nombre del archivo si se genera
+            generated_invoice_name = None
             
             if self._generate_invoice_pdf(invoice_filepath, vehicle_obj, fee, check_in_dt, check_out_dt, duration_minutes):
-                message += f"\nFactura PDF generada: {invoice_filename}" # Usar solo el nombre del archivo para el mensaje
+                message += f"\nFactura PDF generada: {invoice_filename}"
                 generated_invoice_name = invoice_filename
             else:
                 message += f"\nError al generar la factura PDF."
-                # El error específico ya se imprimió en _generate_invoice_pdf
-
             return message, fee, generated_invoice_name
         except sqlite3.Error as e:
             self.conn.rollback() # Revertir cambios si algo falla
@@ -213,7 +206,7 @@ class ParkingManager:
 
     def get_current_vehicles(self):
         """Muestra una lista de todos los vehículos que se encuentran actualmente en el aparcamiento."""
-        self.cursor.execute("SELECT plate, vehicle_type_name, check_in_time FROM parked_vehicles ORDER BY check_in_time ASC")
+        self.cursor.execute("SELECT plate, vehicle_type_name, check_in_time FROM parked_vehicles ORDER BY check_in_time ASC") # CLI
         rows = self.cursor.fetchall()
 
         if not rows:
@@ -223,7 +216,7 @@ class ParkingManager:
         for i, row in enumerate(rows):
             vehicle = self._vehicle_from_row(row, is_history=False)
             if vehicle:
-                ongoing_duration = vehicle.calculate_parking_duration_in_minutes() # Duración hasta el momento actual
+                ongoing_duration = vehicle.calculate_parking_duration_in_minutes()
                 check_in_dt = datetime.fromtimestamp(vehicle.check_in_time / 1000)
                 print(f"{i + 1}. Matrícula: {vehicle.plate}, Tipo: {vehicle.type.name}, Hora de Entrada: {check_in_dt.strftime(self.date_format_str)}, Duración actual: {ongoing_duration} min.")
         print("----------------------------------------")
@@ -232,7 +225,7 @@ class ParkingManager:
         """Muestra un historial de todos los vehículos que han salido del aparcamiento."""
         self.cursor.execute(
             "SELECT plate, vehicle_type_name, check_in_time, check_out_time, duration_minutes, fee FROM vehicle_history ORDER BY check_out_time DESC"
-        )
+        ) # CLI
         rows = self.cursor.fetchall()
 
         if not rows:
@@ -247,11 +240,10 @@ class ParkingManager:
             print(f"     Entrada: {check_in_dt.strftime(self.date_format_str)}, Salida: {check_out_dt.strftime(self.date_format_str)}")
         print("------------------------------")
 
-    def export_history_to_csv(self, filename: str = "historial.csv") -> Optional[str]: # Modificado para Flask
+    def export_history_to_csv(self, filename: str = "historial.csv") -> Optional[str]:
         """
         Exporta el historial de vehículos a un archivo CSV.
-
-        Args:
+        Args: 
             filename (str): El nombre del archivo CSV a crear.
         Returns:
             Optional[str]: La ruta al archivo CSV si la exportación fue exitosa, None en caso contrario.
@@ -266,14 +258,12 @@ class ParkingManager:
 
         # Definir los encabezados para el archivo CSV
         headers = ["Matricula", "TipoVehiculo", "HoraEntrada", "HoraSalida", "DuracionMinutos", "CosteEuros"]
-        
-        # Usar un formato de fecha más estándar para CSV si se desea, o mantener el actual.
         csv_date_format = "%Y-%m-%d %H:%M:%S" 
 
         try:
             with open(filename, mode='w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
-                writer.writerow(headers) # Escribir los encabezados.
+                writer.writerow(headers)
 
                 for row_data in rows:
                     plate, vehicle_type_name, check_in_time, check_out_time, duration_minutes, fee = row_data
@@ -284,25 +274,23 @@ class ParkingManager:
                         datetime.fromtimestamp(check_out_time / 1000).strftime(csv_date_format),
                         duration_minutes,
                         f"{fee:.2f}" # Formatear coste a dos decimales.
-                    ]
+                    ] # type: ignore
                     writer.writerow(row)
             return filename
         except IOError as e:
-            # El manejo de errores se hará en Flask con flash()
+            # El manejo de errores (ej. flash message) se hará en la capa de la aplicación (Flask)
             return None
         
     def close_db(self):
         """Cierra la conexión a la base de datos."""
         if self.conn:
             self.conn.close()
-            # print("Conexión a la base de datos cerrada.") # No es necesario para Flask
 
     # --- Métodos adicionales para Flask ---
-
     def get_current_occupancy(self) -> int:
         """Devuelve el número actual de vehículos en el parking."""
         self.cursor.execute("SELECT COUNT(*) FROM parked_vehicles")
-        current_count = self.cursor.fetchone()[0]
+        current_count = self.cursor.fetchone()[0] # type: ignore
         return current_count
 
     def get_current_vehicles_data(self) -> list[dict]:
@@ -315,7 +303,7 @@ class ParkingManager:
             check_in_dt = datetime.fromtimestamp(check_in_time_millis / 1000)
             vehicles.append({
                 "plate": plate,
-                "vehicle_type_name": vehicle_type_name, # Flask usará esto directamente
+                "vehicle_type_name": vehicle_type_name,
                 "check_in_time": check_in_dt.strftime(self.date_format_str)
             })
         return vehicles

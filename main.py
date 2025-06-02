@@ -1,13 +1,10 @@
 from typing import Optional
-
 from parking_manager import ParkingManager
 from vehicle import VehicleType
-# Importar la nueva función de reconocimiento de matrículas
 try:
     from plate_recognizer import recognize_plate_from_webcam_api as recognize_plate_from_webcam
-except ImportError: # Manejar el caso donde las dependencias de OCR no estén instaladas
+except ImportError: # Manejar caso donde dependencias de OCR no estén instaladas
     recognize_plate_from_webcam = None
-
 
 def ask_vehicle_type() -> Optional[VehicleType]:
     """
@@ -35,7 +32,6 @@ def main():
     parking_manager = ParkingManager(db_name="parking_system.db", capacity=2)
 
     while True:
-        # Mostrar el menú principal
         print("\n--- Menú Principal ---")
         print("1. Registrar entrada de vehículo")
         print("2. Registrar salida de vehículo")
@@ -69,7 +65,6 @@ def main():
             else:
                 print("Error: Tipo de vehículo no válido.")
 
-
         elif choice == 2:
             print("\n--- Registrar Salida de Vehículo ---")
             plate = input("Introduce la matrícula del vehículo a retirar: ").strip().upper()
@@ -92,8 +87,7 @@ def main():
             print("\n--- Registrar Entrada con Reconocimiento de Matrícula (Webcam) ---")
             if recognize_plate_from_webcam is None:
                 print("Error: La funcionalidad de reconocimiento de matrículas no está disponible.")
-                print("Asegúrate de tener OpenCV (cv2) y Pytesseract instalados,")
-                print("y el motor Tesseract OCR configurado en tu sistema.")
+                print("Asegúrate de tener las dependencias de reconocimiento de matrículas instaladas.")
                 continue
 
             if not parking_manager.check_capacity():
@@ -101,7 +95,7 @@ def main():
                 continue
 
             plate = recognize_plate_from_webcam()
-            if not plate: # Si no se reconoció o se canceló
+            if not plate:
                 print("No se pudo reconocer la matrícula o la operación fue cancelada.")
                 continue
 
@@ -116,7 +110,6 @@ def main():
             break
         else:
             print("Opción no válida. Introduce un número entre 1 y 7.")
-
 
 if __name__ == "__main__":
     main()

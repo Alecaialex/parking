@@ -4,19 +4,16 @@ import requests # Necesitarás: pip install requests
 import io
 from typing import Optional
 
-# --- Configuración de la API (DEBES REEMPLAZAR ESTO CON TUS DATOS REALES) ---
+# --- Configuración de la API ---
 # Ejemplo para Plate Recognizer API (https://platerecognizer.com/)
 # 1. Regístrate en platerecognizer.com para obtener tu API Key.
-# 2. Reemplaza 'TU_API_KEY_AQUI' con tu clave.
-PLATE_RECOGNIZER_API_KEY = "6c95017036a0e9421b2cea183ab321c95af0ff6a"  # ¡¡¡IMPORTANTE: Reemplaza esto!!!
+# 2. ¡¡¡IMPORTANTE: LA API KEY NO DEBE ESTAR HARCODEADA AQUÍ!!! Cárgala desde variables de entorno.
+PLATE_RECOGNIZER_API_KEY = "6c95017036a0e9421b2cea183ab321c95af0ff6a" # Ejemplo, reemplazar por os.environ.get()
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
-
-# Si usas otra API, ajusta la URL y la forma de enviar la API Key (headers, params, etc.)
 
 def recognize_plate_from_webcam_api() -> Optional[str]:
     """
-    Activa la webcam, permite al usuario capturar una imagen y la envía
-    a una API de reconocimiento de matrículas.
+    Activa la webcam, captura una imagen y la envía a una API de reconocimiento de matrículas.
 
     Muestra una ventana con la vista de la webcam. El usuario puede:
     - Presionar la tecla 'espacio' para capturar la imagen actual y procesarla.
@@ -56,8 +53,7 @@ def recognize_plate_from_webcam_api() -> Optional[str]:
         if key == ord(' '):  # Tecla espacio para capturar
             print("Capturando imagen y enviando a la API...")
 
-            # Codificar la imagen a formato JPG (o PNG) en memoria
-            # La mayoría de las APIs aceptan JPG o PNG.
+            # Codificar la imagen a formato JPG en memoria
             success, image_bytes_cv = cv2.imencode('.jpg', frame)
             if not success:
                 print("Error: No se pudo codificar la imagen a JPG.")
@@ -88,8 +84,7 @@ def recognize_plate_from_webcam_api() -> Optional[str]:
                     confidence = plate_info.get('score', plate_info.get('confidence', 0))
 
                     if plate_number:
-                        # Limpiar la matrícula (quitar espacios, convertir a mayúsculas)
-                        # La API ya podría devolverla limpia, pero por si acaso.
+                        # Limpiar la matrícula (quitar no alfanuméricos, convertir a mayúsculas)
                         plate_number_cleaned = "".join(filter(str.isalnum, plate_number)).upper()
                         print(f"Matrícula reconocida por API: '{plate_number_cleaned}' (Confianza: {confidence:.2f})")
                         recognized_plate = plate_number_cleaned
@@ -103,7 +98,7 @@ def recognize_plate_from_webcam_api() -> Optional[str]:
 
             except requests.exceptions.RequestException as e:
                 print(f"Error de red o al contactar la API: {e}")
-            except ValueError as e: # Error al parsear JSON
+            except ValueError as e: # Error al decodificar JSON
                 print(f"Error al procesar la respuesta de la API (JSON inválido): {e}")
             except Exception as e:
                 print(f"Error inesperado durante la llamada a la API: {e}")
