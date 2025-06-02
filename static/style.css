@@ -1,0 +1,21 @@
+body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+header { background-color: #333; color: white; padding: 10px 0; text-align: center; }
+nav { background-color: #444; padding: 10px; text-align: center; }
+nav a { color: white; margin: 0 15px; text-decoration: none; }
+nav a:hover { text-decoration: underline; }
+main { background-color: white; padding: 20px; margin-top: 10px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+h2 { color: #333; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background-color: #f0f0f0; }
+form div { margin-bottom: 15px; }
+form label { display: block; margin-bottom: 5px; }
+form input[type="text"], form select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+form button { background-color: #5cb85c; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; }
+form button:hover { background-color: #4cae4c; }
+.flashes { list-style-type: none; padding: 0; }
+.flashes li { padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+.flashes li.success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+.flashes li.error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+.flashes li.info { background-color: #d9edf7; color: #31708f; border: 1px solid #bce8f1; }
+footer { text-align: center; margin-top: 20px; padding: 10px; background-color: #333; color: white; }

@@ -11,7 +11,7 @@ class ParkingManager:
 
     def __init__(self, db_name, capacity):
         self.db_name = db_name
-        self.conn = sqlite3.connect(self.db_name)
+        self.conn = sqlite3.connect(self.db_name, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._create_tables()
         # Formateador para mostrar fechas y horas de forma legible.
@@ -53,28 +53,17 @@ class ParkingManager:
             print(f"Error: Tipo de vehículo desconocido '{vehicle_type_name}' en la base de datos para la matrícula {plate}.")
             return None
         
-    def check_capacity(self) -> bool:
+    def check_capacity(self) -> bool: # Utilizado por Flask
         self.cursor.execute("SELECT COUNT(*) FROM parked_vehicles")
         current_count = self.cursor.fetchone()[0]
         return not current_count >= self.capacity
-    
-    def check_in_vehicle(self, plate: str, vehicle_type: VehicleType) -> bool:
-        """
-        Registra la entrada de un nuevo vehículo al aparcamiento.
-        Args:
-            plate: La matrícula del vehículo.
-            vehicle_type: El tipo de vehículo (COCHE, MOTO, FURGONETA).
-        Returns:
-            True si el vehículo se registró correctamente, False si ya existe un vehículo con esa matrícula.
-        """
-
+    def check_in_vehicle(self, plate: str, vehicle_type: VehicleType) -> str: # Modificado para Flask
         self.cursor.execute("SELECT plate FROM parked_vehicles WHERE plate = ?", (plate,))
         if self.cursor.fetchone():
-            print(f"Error: El vehículo con matrícula {plate} ya está en el parking.")
-            return False
+            return f"Error: El vehículo con matrícula {plate} ya está en el parking."
         
         check_in_time_millis = int(time.time() * 1000)
-
+    
         try:
             self.cursor.execute(
                 "INSERT INTO parked_vehicles (plate, vehicle_type_name, check_in_time) VALUES (?, ?, ?)",
@@ -82,13 +71,11 @@ class ParkingManager:
             )
             self.conn.commit()
             check_in_dt = datetime.fromtimestamp(check_in_time_millis / 1000)
-            print(f"Vehículo {plate} ({vehicle_type.name}) registrado. Hora de entrada: {check_in_dt.strftime(self.date_format_str)}")
-            return True
+            return f"Vehículo {plate} ({vehicle_type.name}) registrada. Hora de entrada: {check_in_dt.strftime(self.date_format_str)}"
         except sqlite3.Error as e:
-            print(f"Error de base de datos al registrar entrada: {e}")
-            return False
+            return f"Error de base de datos al registrar entrada: {e}"
 
-    def check_out_vehicle(self, plate: str) -> Optional[Vehicle]:
+    def check_out_vehicle(self, plate: str) -> tuple[str, Optional[float]]: # Modificado para Flask
         """
         Registra la salida de un vehículo del aparcamiento.
         Calcula la duración de la estancia y el coste.
@@ -102,8 +89,8 @@ class ParkingManager:
 
         if not row:
             print(f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.")
-            return None
-
+            return f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.", None
+    
         db_plate, db_vehicle_type_name, db_check_in_time = row
         try:
             vehicle_type_enum = VehicleType[db_vehicle_type_name]
@@ -129,20 +116,17 @@ class ParkingManager:
 
             check_in_dt = datetime.fromtimestamp(db_check_in_time / 1000)
             check_out_dt = datetime.fromtimestamp(current_check_out_time / 1000)
-
-            print("\n--- Salida de Vehículo ---")
-            print(f"Vehículo {db_plate} ({db_vehicle_type_name}) ha salido.")
-            print(f"  Hora de entrada: {check_in_dt.strftime(self.date_format_str)}")
-            print(f"  Hora de salida: {check_out_dt.strftime(self.date_format_str)}")
-            print(f"  Duración: {duration_minutes} minutos")
-            print(f"  Coste: €{fee:.2f}")
-            print("--------------------------")
-            return temp_vehicle_for_calc # Devuelve el objeto con los datos calculados
-
+            message = (
+                f"Salida registrada para {db_plate} ({db_vehicle_type_name}).\n"
+                f"  Hora de entrada: {check_in_dt.strftime(self.date_format_str)}\n"
+                f"  Hora de salida: {check_out_dt.strftime(self.date_format_str)}\n"
+                f"  Duración: {duration_minutes} minutos\n"
+                f"  Coste: €{fee:.2f}"
+            )
+            return message, fee
         except sqlite3.Error as e:
-            print(f"Error de base de datos al registrar salida: {e}")
             self.conn.rollback() # Revertir cambios si algo falla
-            return None
+            return f"Error de base de datos al registrar salida: {e}", None
 
     def get_current_vehicles(self):
         """Muestra una lista de todos los vehículos que se encuentran actualmente en el aparcamiento."""
@@ -180,15 +164,14 @@ class ParkingManager:
             print(f"     Entrada: {check_in_dt.strftime(self.date_format_str)}, Salida: {check_out_dt.strftime(self.date_format_str)}")
         print("------------------------------")
 
-    def export_history_to_csv(self, filename: str = "historial.csv") -> bool:
+    def export_history_to_csv(self, filename: str = "historial.csv") -> Optional[str]: # Modificado para Flask
         """
         Exporta el historial de vehículos a un archivo CSV.
 
         Args:
             filename (str): El nombre del archivo CSV a crear.
-
         Returns:
-            bool: True si la exportación fue exitosa, False en caso contrario.
+            Optional[str]: La ruta al archivo CSV si la exportación fue exitosa, None en caso contrario.
         """
         self.cursor.execute(
             "SELECT plate, vehicle_type_name, check_in_time, check_out_time, duration_minutes, fee FROM vehicle_history ORDER BY check_out_time ASC"
@@ -196,8 +179,7 @@ class ParkingManager:
         rows = self.cursor.fetchall()
 
         if not rows:
-            print("No hay historial para exportar.")
-            return False
+            return None
 
         # Definir los encabezados para el archivo CSV
         headers = ["Matricula", "TipoVehiculo", "HoraEntrada", "HoraSalida", "DuracionMinutos", "CosteEuros"]
@@ -221,14 +203,54 @@ class ParkingManager:
                         f"{fee:.2f}" # Formatear coste a dos decimales.
                     ]
                     writer.writerow(row)
-            print(f"Historial exportado correctamente a {filename}")
-            return True
+            return filename
         except IOError as e:
-            print(f"Error al exportar el historial a CSV: {e}")
-            return False
+            # El manejo de errores se hará en Flask con flash()
+            return None
         
     def close_db(self):
         """Cierra la conexión a la base de datos."""
         if self.conn:
             self.conn.close()
-            print("Conexión a la base de datos cerrada.")
+            # print("Conexión a la base de datos cerrada.") # No es necesario para Flask
+
+    # --- Métodos adicionales para Flask ---
+
+    def get_current_occupancy(self) -> int:
+        """Devuelve el número actual de vehículos en el parking."""
+        self.cursor.execute("SELECT COUNT(*) FROM parked_vehicles")
+        current_count = self.cursor.fetchone()[0]
+        return current_count
+
+    def get_current_vehicles_data(self) -> list[dict]:
+        """Devuelve una lista de diccionarios con los vehículos actuales para Flask."""
+        self.cursor.execute("SELECT plate, vehicle_type_name, check_in_time FROM parked_vehicles ORDER BY check_in_time ASC")
+        rows = self.cursor.fetchall()
+        vehicles = []
+        for row_data in rows:
+            plate, vehicle_type_name, check_in_time_millis = row_data
+            check_in_dt = datetime.fromtimestamp(check_in_time_millis / 1000)
+            vehicles.append({
+                "plate": plate,
+                "vehicle_type_name": vehicle_type_name, # Flask usará esto directamente
+                "check_in_time": check_in_dt.strftime(self.date_format_str)
+            })
+        return vehicles
+
+    def get_vehicle_history_data(self) -> list[dict]:
+        """Devuelve una lista de diccionarios con el historial de vehículos para Flask."""
+        self.cursor.execute(
+            "SELECT plate, vehicle_type_name, check_in_time, check_out_time, duration_minutes, fee FROM vehicle_history ORDER BY check_out_time DESC"
+        )
+        rows = self.cursor.fetchall()
+        history = []
+        for plate_val, vt_name, ci_time, co_time, duration, cost in rows:
+            history.append({
+                "plate": plate_val,
+                "vehicle_type_name": vt_name,
+                "check_in_time": datetime.fromtimestamp(ci_time / 1000).strftime(self.date_format_str),
+                "check_out_time": datetime.fromtimestamp(co_time / 1000).strftime(self.date_format_str) if co_time else None,
+                "duration_minutes": duration,
+                "total_cost": cost
+            })
+        return history

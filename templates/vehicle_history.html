@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Historial de Vehículos{% endblock %}
+{% block content %}
+<h2>Historial de Vehículos</h2>
+{% if history %}
+<table>
+    <thead>
+        <tr>
+            <th>Matrícula</th>
+            <th>Tipo</th>
+            <th>Hora de Entrada</th>
+            <th>Hora de Salida</th>
+            <th>Coste Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in history %}
+        <tr>
+            <td>{{ record.plate }}</td>
+            <td>{{ record.vehicle_type_name }}</td> {# Asume que ParkingManager añade este campo #}
+            <td>{{ record.check_in_time }}</td>
+            <td>{{ record.check_out_time if record.check_out_time else 'N/A' }}</td>
+            <td>€{{ "%.2f"|format(record.total_cost) if record.total_cost is not none else 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No hay historial de vehículos.</p>
+{% endif %}
+{% endblock %}

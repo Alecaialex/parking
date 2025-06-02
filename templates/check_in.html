@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Registrar Entrada{% endblock %}
+{% block content %}
+<h2>Registrar Entrada de Vehículo</h2>
+<form method="POST" action="{{ url_for('check_in') }}">
+    <div>
+        <label for="plate">Matrícula:</label>
+        <input type="text" id="plate" name="plate" value="{{ recognized_plate or '' }}" required>
+    </div>
+    <div>
+        <label for="vehicle_type">Tipo de Vehículo:</label>
+        <select id="vehicle_type" name="vehicle_type" required>
+            <option value="">Seleccione un tipo</option>
+            {% for vt in vehicle_types %}
+            <option value="{{ vt.value }}">{{ vt.name }} (Tarifa: €{{ "%.2f"|format(vt.rate) }}/hora)</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit">Registrar Entrada</button>
+</form>
+{% endblock %}

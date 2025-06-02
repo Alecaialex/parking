@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Parking - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> {# Opcional #}
+</head>
+<body>
+    <header>
+        <h1>Gestión de Parking</h1>
+    </header>
+    <nav>
+        <a href="{{ url_for('index') }}">Inicio</a>
+        <a href="{{ url_for('check_in') }}">Registrar Entrada</a>
+        <a href="{{ url_for('check_in_webcam') }}">Entrada (Webcam)</a>
+        <a href="{{ url_for('check_out') }}">Registrar Salida</a>
+        <a href="{{ url_for('current_vehicles_route') }}">Vehículos Actuales</a>
+        <a href="{{ url_for('history_route') }}">Historial</a>
+        <a href="{{ url_for('export_csv') }}">Exportar CSV</a>
+    </nav>
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

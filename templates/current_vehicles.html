@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Vehículos Actuales{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Vehículos Actualmente en el Parking</h1>
+
+        {% if vehicles %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Matrícula</th>
+                        <th>Tipo de Vehículo</th>
+                        <th>Hora de Entrada</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in vehicles %}
+                    <tr>
+                        <td>{{ vehicle.plate }}</td>
+                        <td>{{ vehicle.vehicle_type_name }}</td>
+                        <td>{{ vehicle.check_in_time }}</td>
+                        <td>
+                            <form action="{{ url_for('check_out') }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="plate" value="{{ vehicle.plate }}">
+                                <!-- Enviamos el nombre de la ruta actual para poder redirigir de vuelta aquí -->
+                                <input type="hidden" name="source_page_route" value="current_vehicles_route">
+                                <button type="submit" onclick="return confirm('¿Estás seguro de que quieres registrar la salida de este vehículo?');">Registrar Salida</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay vehículos actualmente en el parking.</p>
+        {% endif %}
+        <!-- El botón de "Volver al Menú Principal" ya no es tan necesario con la barra de navegación, pero puedes dejarlo si quieres -->
+        <!-- <br> -->
+        <!-- <a href="{{ url_for('index') }}" class="button">Volver al Menú Principal</a> -->
+    </div>
+{% endblock %}
