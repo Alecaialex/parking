@@ -3,6 +3,7 @@ from datetime import datetime
 import csv
 from typing import Optional
 import sqlite3
+from fpdf import FPDF # Importar FPDF
 import os # Necesario para crear el directorio de facturas
 
 from vehicle import Vehicle, VehicleType
@@ -83,51 +84,63 @@ class ParkingManager:
         except sqlite3.Error as e:
             return f"Error de base de datos al registrar entrada: {e}"
 
-    def _generate_invoice_content(self, vehicle: Vehicle, fee: float, check_in_dt: datetime, check_out_dt: datetime, duration_minutes: int) -> str:
-        """Genera el contenido textual de la factura."""
-        
-        # Para el cálculo de Base Imponible e IVA (asumiendo 21% IVA incluido en fee)
-        # Si fee es el total con IVA:
-        # base_imponible = fee / 1.21
-        # iva_amount = fee - base_imponible
-        # Si fee es la base imponible y hay que añadir IVA:
-        # iva_amount = fee * 0.21
-        # total_con_iva = fee + iva_amount
-        # Por simplicidad, asumiremos que 'fee' es el total y no desglosaremos IVA.
-        # Si quieres desglose, puedes implementarlo aquí.
+    def _generate_invoice_pdf(self, filepath: str, vehicle: Vehicle, fee: float, check_in_dt: datetime, check_out_dt: datetime, duration_minutes: int) -> bool:
+        """
+        Genera una factura en formato PDF y la guarda en la ruta especificada.
+        Devuelve True si se generó correctamente, False en caso contrario.
+        """
+        pdf = FPDF()
+        pdf.add_page()
+        euro_symbol = chr(128) # Símbolo del Euro para FPDF con fuentes estándar
 
-        invoice_lines = [
-            "*****************************************",
-            "*          FACTURA SIMPLIFICADA         *",
-            "*****************************************",
-            "",
-            f"Establecimiento: {self.parking_name}",
-            f"Dirección: {self.parking_address}",
-            f"NIF: {self.parking_nif}",
-            "",
-            "-----------------------------------------",
-            f"Fecha Factura: {check_out_dt.strftime(self.date_format_str)}",
-            "-----------------------------------------",
-            "",
-            "DETALLES DEL SERVICIO:",
-            f"Vehículo Matrícula: {vehicle.plate}",
-            f"Tipo de Vehículo:   {vehicle.type.name}",
-            "",
-            f"Hora de Entrada: {check_in_dt.strftime(self.date_format_str)}",
-            f"Hora de Salida:  {check_out_dt.strftime(self.date_format_str)}",
-            f"Duración Total:  {duration_minutes} minutos",
-            "",
-            "-----------------------------------------",
-            "IMPORTE A PAGAR",
-            "-----------------------------------------",
-            f"Tarifa Aplicada: {vehicle.type.hourly_rate:.2f} €/hora",
-            f"TOTAL A PAGAR:   €{fee:.2f}",
-            "-----------------------------------------",
-            "",
-            "Gracias por su visita.",
-            "*****************************************"
-        ]
-        return "\n".join(invoice_lines)
+        # Encabezado de la Factura
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "FACTURA SIMPLIFICADA", 0, 1, "C")
+        pdf.ln(5)
+
+        # Información del Parking
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 6, f"Establecimiento: {self.parking_name}", 0, 1)
+        pdf.cell(0, 6, f"Dirección: {self.parking_address}", 0, 1)
+        pdf.cell(0, 6, f"NIF: {self.parking_nif}", 0, 1)
+        pdf.ln(5)
+
+        # Fecha de la Factura
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, f"Fecha Factura: {check_out_dt.strftime(self.date_format_str)}", 0, 1)
+        pdf.ln(5)
+
+        # Detalles del Servicio
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 6, "DETALLES DEL SERVICIO:", 0, 1)
+        pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 6, f"Vehículo Matrícula: {vehicle.plate}", 0, 1)
+        pdf.cell(0, 6, f"Tipo de Vehículo:   {vehicle.type.name}", 0, 1)
+        pdf.ln(3)
+        pdf.cell(0, 6, f"Hora de Entrada: {check_in_dt.strftime(self.date_format_str)}", 0, 1)
+        pdf.cell(0, 6, f"Hora de Salida:  {check_out_dt.strftime(self.date_format_str)}", 0, 1)
+        pdf.cell(0, 6, f"Duración Total:  {duration_minutes} minutos", 0, 1)
+        pdf.ln(5)
+
+        # Importe a Pagar
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 6, "IMPORTE A PAGAR", 0, 1)
+        pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 6, f"Tarifa Aplicada: {vehicle.type.hourly_rate:.2f} {euro_symbol}/hora", 0, 1)
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 8, f"TOTAL A PAGAR:   {euro_symbol}{fee:.2f}", 0, 1)
+        pdf.ln(10)
+
+        # Agradecimiento
+        pdf.set_font("Arial", "I", 10)
+        pdf.cell(0, 10, "Gracias por su visita.", 0, 1, "C")
+        
+        try:
+            pdf.output(filepath, "F")
+            return True
+        except Exception as e:
+            print(f"Error al generar el PDF de la factura {filepath}: {e}")
+            return False
 
     def check_out_vehicle(self, plate: str) -> tuple[str, Optional[float]]: # Modificado para Flask
         """
@@ -179,16 +192,14 @@ class ParkingManager:
             )
 
             # Generar y guardar la factura
-            invoice_content = self._generate_invoice_content(vehicle_obj, fee, check_in_dt, check_out_dt, duration_minutes)
-            invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.txt"
+            invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.pdf" # Cambiar extensión a .pdf
             invoice_filepath = os.path.join(self.invoices_dir, invoice_filename)
-            try:
-                with open(invoice_filepath, 'w', encoding='utf-8') as f:
-                    f.write(invoice_content)
-                message += f"\nFactura generada: {invoice_filepath}"
-            except IOError as e_io:
-                message += f"\nError al guardar la factura: {e_io}"
-                print(f"Error al escribir el archivo de factura {invoice_filepath}: {e_io}")
+            
+            if self._generate_invoice_pdf(invoice_filepath, vehicle_obj, fee, check_in_dt, check_out_dt, duration_minutes):
+                message += f"\nFactura PDF generada: {invoice_filepath}"
+            else:
+                message += f"\nError al generar la factura PDF."
+                # El error específico ya se imprimió en _generate_invoice_pdf
 
             return message, fee
         except sqlite3.Error as e:
