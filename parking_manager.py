@@ -3,6 +3,7 @@ from datetime import datetime
 import csv
 from typing import Optional
 import sqlite3
+import os # Necesario para crear el directorio de facturas
 
 from vehicle import Vehicle, VehicleType
 
@@ -16,6 +17,13 @@ class ParkingManager:
         self._create_tables()
         # Formateador para mostrar fechas y horas de forma legible.
         self.date_format_str: str = "%d/%m/%Y %H:%M:%S"
+        # Información del Parking para las facturas
+        self.parking_name: str = "Parking Central"
+        self.parking_address: str = "Calle Falsa 123, Ciudad Ejemplo"
+        self.parking_nif: str = "B12345678"
+        self.invoices_dir: str = "invoices"
+        # Crear el directorio de facturas si no existe
+        os.makedirs(self.invoices_dir, exist_ok=True)
         self.capacity = capacity
 
     def _create_tables(self):
@@ -75,6 +83,52 @@ class ParkingManager:
         except sqlite3.Error as e:
             return f"Error de base de datos al registrar entrada: {e}"
 
+    def _generate_invoice_content(self, vehicle: Vehicle, fee: float, check_in_dt: datetime, check_out_dt: datetime, duration_minutes: int) -> str:
+        """Genera el contenido textual de la factura."""
+        
+        # Para el cálculo de Base Imponible e IVA (asumiendo 21% IVA incluido en fee)
+        # Si fee es el total con IVA:
+        # base_imponible = fee / 1.21
+        # iva_amount = fee - base_imponible
+        # Si fee es la base imponible y hay que añadir IVA:
+        # iva_amount = fee * 0.21
+        # total_con_iva = fee + iva_amount
+        # Por simplicidad, asumiremos que 'fee' es el total y no desglosaremos IVA.
+        # Si quieres desglose, puedes implementarlo aquí.
+
+        invoice_lines = [
+            "*****************************************",
+            "*          FACTURA SIMPLIFICADA         *",
+            "*****************************************",
+            "",
+            f"Establecimiento: {self.parking_name}",
+            f"Dirección: {self.parking_address}",
+            f"NIF: {self.parking_nif}",
+            "",
+            "-----------------------------------------",
+            f"Fecha Factura: {check_out_dt.strftime(self.date_format_str)}",
+            "-----------------------------------------",
+            "",
+            "DETALLES DEL SERVICIO:",
+            f"Vehículo Matrícula: {vehicle.plate}",
+            f"Tipo de Vehículo:   {vehicle.type.name}",
+            "",
+            f"Hora de Entrada: {check_in_dt.strftime(self.date_format_str)}",
+            f"Hora de Salida:  {check_out_dt.strftime(self.date_format_str)}",
+            f"Duración Total:  {duration_minutes} minutos",
+            "",
+            "-----------------------------------------",
+            "IMPORTE A PAGAR",
+            "-----------------------------------------",
+            f"Tarifa Aplicada: {vehicle.type.hourly_rate:.2f} €/hora",
+            f"TOTAL A PAGAR:   €{fee:.2f}",
+            "-----------------------------------------",
+            "",
+            "Gracias por su visita.",
+            "*****************************************"
+        ]
+        return "\n".join(invoice_lines)
+
     def check_out_vehicle(self, plate: str) -> tuple[str, Optional[float]]: # Modificado para Flask
         """
         Registra la salida de un vehículo del aparcamiento.
@@ -95,14 +149,14 @@ class ParkingManager:
         try:
             vehicle_type_enum = VehicleType[db_vehicle_type_name]
         except KeyError:
-            print(f"Error: Tipo de vehículo desconocido '{db_vehicle_type_name}' para la matrícula {db_plate} al salir.")
-            return None
+            error_msg = f"Error: Tipo de vehículo desconocido '{db_vehicle_type_name}' para la matrícula {db_plate} al salir."
+            print(error_msg) # Para la consola
+            return error_msg, None
 
         current_check_out_time = int(time.time() * 1000)
-        temp_vehicle_for_calc = Vehicle(db_plate, vehicle_type_enum, db_check_in_time, current_check_out_time)
-        
-        duration_minutes = temp_vehicle_for_calc.calculate_parking_duration_in_minutes()
-        fee = temp_vehicle_for_calc.calculate_parking_fee()
+        vehicle_obj = Vehicle(db_plate, vehicle_type_enum, db_check_in_time, current_check_out_time)
+        duration_minutes = vehicle_obj.calculate_parking_duration_in_minutes()
+        fee = vehicle_obj.calculate_parking_fee()
 
         try:
             self.cursor.execute("DELETE FROM parked_vehicles WHERE plate = ?", (plate,))
@@ -121,8 +175,21 @@ class ParkingManager:
                 f"  Hora de entrada: {check_in_dt.strftime(self.date_format_str)}\n"
                 f"  Hora de salida: {check_out_dt.strftime(self.date_format_str)}\n"
                 f"  Duración: {duration_minutes} minutos\n"
-                f"  Coste: €{fee:.2f}"
+                f"  Coste: €{fee:.2f}",
             )
+
+            # Generar y guardar la factura
+            invoice_content = self._generate_invoice_content(vehicle_obj, fee, check_in_dt, check_out_dt, duration_minutes)
+            invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.txt"
+            invoice_filepath = os.path.join(self.invoices_dir, invoice_filename)
+            try:
+                with open(invoice_filepath, 'w', encoding='utf-8') as f:
+                    f.write(invoice_content)
+                message += f"\nFactura generada: {invoice_filepath}"
+            except IOError as e_io:
+                message += f"\nError al guardar la factura: {e_io}"
+                print(f"Error al escribir el archivo de factura {invoice_filepath}: {e_io}")
+
             return message, fee
         except sqlite3.Error as e:
             self.conn.rollback() # Revertir cambios si algo falla
