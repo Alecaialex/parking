@@ -175,7 +175,7 @@ class ParkingManager:
                 f"  Hora de entrada: {check_in_dt.strftime(self.date_format_str)}\n"
                 f"  Hora de salida: {check_out_dt.strftime(self.date_format_str)}\n"
                 f"  Duración: {duration_minutes} minutos\n"
-                f"  Coste: €{fee:.2f}",
+                f"  Coste: €{fee:.2f}"
             )
 
             # Generar y guardar la factura
