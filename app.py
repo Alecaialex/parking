@@ -115,27 +115,29 @@ def check_out():
                 redirect_url = url_for('check_out') # Default a la propia página de checkout
             return redirect(redirect_url)
 
-        message, fee, generated_invoice_filename = parking_manager.check_out_vehicle(plate)
-        
+        message, fee, generated_invoice_filename = parking_manager.check_out_vehicle(plate)        
         category = "success" if "Salida registrada" in message else "error"
         
-        # Reemplazar saltos de línea con <br> para una mejor visualización en HTML
-        html_message = message.replace('\n', '<br>')
-
         if generated_invoice_filename and category == "success":
-            invoice_url = url_for('serve_invoice', filename=generated_invoice_filename)
-            link_html = f'<br><a href="{invoice_url}" target="_blank" class="button-link">Ver Factura PDF</a>'
-            # Usamos Markup para indicar a Flask que esta cadena es HTML seguro y no debe ser escapada
-            flash(Markup(html_message + link_html), category)
+            # Si la factura se generó con éxito, servirla directamente para descarga.
+            # Un mensaje flash aquí no sería visible ya que la respuesta es un archivo.
+            # Puedes registrar el mensaje si es necesario.
+            app.logger.info(f"Salida registrada para {plate}. Factura {generated_invoice_filename} generada. Mensaje: {message}")
+            return send_from_directory(INVOICES_DIR, 
+                                       generated_invoice_filename, 
+                                       as_attachment=True, 
+                                       download_name=generated_invoice_filename)
         else:
+            # Si hubo un error o la factura no se generó, mostrar mensaje flash y redirigir.
+            # Reemplazar saltos de línea con <br> para una mejor visualización en HTML
+            html_message = message.replace('\n', '<br>')
             flash(Markup(html_message), category) # También usar Markup aquí por consistencia con <br>
             
-        # Redirigir a la página de origen
-        try:
-            redirect_url = url_for(source_page_route)
-        except:
-            redirect_url = url_for('index') # Default a index si la ruta de origen es inválida
-        return redirect(redirect_url)
+            try:
+                redirect_url = url_for(source_page_route)
+            except:
+                redirect_url = url_for('index') # Default a index si la ruta de origen es inválida
+            return redirect(redirect_url)
 
     return render_template('check_out.html')
 
@@ -185,8 +187,11 @@ def export_csv():
 
 @app.route('/invoices/<filename>')
 def serve_invoice(filename):
-    """Sirve un archivo de factura PDF desde el directorio de facturas."""
-    return send_from_directory(INVOICES_DIR, filename, as_attachment=False) # as_attachment=False intenta mostrarlo inline
+    """Sirve un archivo de factura PDF desde el directorio de facturas, forzando la descarga."""
+    return send_from_directory(INVOICES_DIR, 
+                               filename, 
+                               as_attachment=True, 
+                               download_name=filename)
 
 # Es buena práctica cerrar la base de datos cuando la aplicación se detiene
 @app.teardown_appcontext
