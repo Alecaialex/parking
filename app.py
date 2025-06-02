@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, after_this_request
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, after_this_request, send_from_directory, Markup
 from parking_manager import ParkingManager
 from vehicle import VehicleType
 from typing import Optional
@@ -21,6 +21,9 @@ CSV_EXPORT_FILENAME = "parking_history.csv"
 # --- Instancia del ParkingManager ---
 # Se crea una única instancia para toda la aplicación
 parking_manager = ParkingManager(db_name=DB_NAME, capacity=PARKING_CAPACITY)
+
+# Directorio donde se guardan las facturas (relativo a la ubicación de app.py)
+INVOICES_DIR = os.path.join(app.root_path, parking_manager.invoices_dir)
 
 def get_vehicle_types_for_template():
     """Prepara los tipos de vehículo para usarlos en las plantillas."""
@@ -103,14 +106,36 @@ def check_out():
         plate = request.form.get('plate', '').strip().upper()
         # Obtener la página de origen para la redirección, por defecto 'index'
         source_page_route = request.form.get('source_page_route', 'index')
+        
         if not plate:
             flash("Error: La matrícula no puede estar vacía.", "error")
-            # Redirigir a la página de origen si es válida, sino a la página de check_out
-            # Redirigir a la página de origen especificada
-            return redirect(url_for(source_page_route))
-        message, _ = parking_manager.check_out_vehicle(plate) # El segundo valor es el coste, que podríamos mostrar
-        flash(message, "success" if "Salida registrada" in message else "error")
-        return redirect(url_for('index'))
+            try:
+                redirect_url = url_for(source_page_route)
+            except: # BuildError (si source_page_route no es una ruta válida)
+                redirect_url = url_for('check_out') # Default a la propia página de checkout
+            return redirect(redirect_url)
+
+        message, fee, generated_invoice_filename = parking_manager.check_out_vehicle(plate)
+        
+        category = "success" if "Salida registrada" in message else "error"
+        
+        # Reemplazar saltos de línea con <br> para una mejor visualización en HTML
+        html_message = message.replace('\n', '<br>')
+
+        if generated_invoice_filename and category == "success":
+            invoice_url = url_for('serve_invoice', filename=generated_invoice_filename)
+            link_html = f'<br><a href="{invoice_url}" target="_blank" class="button-link">Ver Factura PDF</a>'
+            # Usamos Markup para indicar a Flask que esta cadena es HTML seguro y no debe ser escapada
+            flash(Markup(html_message + link_html), category)
+        else:
+            flash(Markup(html_message), category) # También usar Markup aquí por consistencia con <br>
+            
+        # Redirigir a la página de origen
+        try:
+            redirect_url = url_for(source_page_route)
+        except:
+            redirect_url = url_for('index') # Default a index si la ruta de origen es inválida
+        return redirect(redirect_url)
 
     return render_template('check_out.html')
 
@@ -157,6 +182,11 @@ def export_csv():
     except Exception as e:
         flash(f"Error inesperado al exportar CSV: {str(e)}", "error")
     return redirect(url_for('index'))
+
+@app.route('/invoices/<filename>')
+def serve_invoice(filename):
+    """Sirve un archivo de factura PDF desde el directorio de facturas."""
+    return send_from_directory(INVOICES_DIR, filename, as_attachment=False) # as_attachment=False intenta mostrarlo inline
 
 # Es buena práctica cerrar la base de datos cuando la aplicación se detiene
 @app.teardown_appcontext

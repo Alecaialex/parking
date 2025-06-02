@@ -142,7 +142,7 @@ class ParkingManager:
             print(f"Error al generar el PDF de la factura {filepath}: {e}")
             return False
 
-    def check_out_vehicle(self, plate: str) -> tuple[str, Optional[float]]: # Modificado para Flask
+    def check_out_vehicle(self, plate: str) -> tuple[str, Optional[float], Optional[str]]:
         """
         Registra la salida de un vehículo del aparcamiento.
         Calcula la duración de la estancia y el coste.
@@ -150,13 +150,14 @@ class ParkingManager:
             plate: La matrícula del vehículo a retirar.
         Returns:
             El objeto Vehicle que ha salido, o None si no se encontró el vehículo.
+            Una tupla: (mensaje_resultado, tarifa_calculada, nombre_archivo_factura_generada)
         """
         self.cursor.execute("SELECT plate, vehicle_type_name, check_in_time FROM parked_vehicles WHERE plate = ?", (plate,))
         row = self.cursor.fetchone()
 
         if not row:
             print(f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.")
-            return f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.", None
+            return f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.", None, None
     
         db_plate, db_vehicle_type_name, db_check_in_time = row
         try:
@@ -164,7 +165,7 @@ class ParkingManager:
         except KeyError:
             error_msg = f"Error: Tipo de vehículo desconocido '{db_vehicle_type_name}' para la matrícula {db_plate} al salir."
             print(error_msg) # Para la consola
-            return error_msg, None
+            return error_msg, None, None
 
         current_check_out_time = int(time.time() * 1000)
         vehicle_obj = Vehicle(db_plate, vehicle_type_enum, db_check_in_time, current_check_out_time)
@@ -194,17 +195,19 @@ class ParkingManager:
             # Generar y guardar la factura
             invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.pdf" # Cambiar extensión a .pdf
             invoice_filepath = os.path.join(self.invoices_dir, invoice_filename)
+            generated_invoice_name = None # Para almacenar el nombre del archivo si se genera
             
             if self._generate_invoice_pdf(invoice_filepath, vehicle_obj, fee, check_in_dt, check_out_dt, duration_minutes):
-                message += f"\nFactura PDF generada: {invoice_filepath}"
+                message += f"\nFactura PDF generada: {invoice_filename}" # Usar solo el nombre del archivo para el mensaje
+                generated_invoice_name = invoice_filename
             else:
                 message += f"\nError al generar la factura PDF."
                 # El error específico ya se imprimió en _generate_invoice_pdf
 
-            return message, fee
+            return message, fee, generated_invoice_name
         except sqlite3.Error as e:
             self.conn.rollback() # Revertir cambios si algo falla
-            return f"Error de base de datos al registrar salida: {e}", None
+            return f"Error de base de datos al registrar salida: {e}", None, None
 
     def get_current_vehicles(self):
         """Muestra una lista de todos los vehículos que se encuentran actualmente en el aparcamiento."""
