@@ -129,9 +129,8 @@ def check_out():
                                        download_name=generated_invoice_filename)
         else:
             # Si hubo un error o la factura no se generó, mostrar mensaje flash y redirigir.
-            # Reemplazar saltos de línea con <br> para una mejor visualización en HTML
-            html_message = message.replace('\n', '<br>')
-            flash(Markup(html_message), category) # También usar Markup aquí por consistencia con <br>
+            # Flashear el mensaje original. Los \n se tratarán como espacios en HTML por defecto.
+            flash(message, category)
             
             try:
                 redirect_url = url_for(source_page_route)
