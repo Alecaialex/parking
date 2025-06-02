@@ -20,7 +20,7 @@ class ParkingManager:
         self.date_format_str: str = "%d/%m/%Y %H:%M:%S"
         # Información del Parking para las facturas
         self.parking_name: str = "Parking Central"
-        self.parking_address: str = "Calle Falsa 123, Ciudad Ejemplo"
+        self.parking_address: str = "Cto Juan Pablo II 2457, La Hacienda, 72570 Heroica Puebla de Zaragoza, Pue., México"
         self.parking_nif: str = "B12345678"
         self.invoices_dir: str = "invoices"
         # Crear el directorio de facturas si no existe
@@ -114,6 +114,8 @@ class ParkingManager:
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 6, "DETALLES DEL SERVICIO:", 0, 1)
         pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 6, "Cliente: José Luis Ábalos", 0, 1)
+        pdf.cell(0, 6, "Empleada: Jessica Rodríguez", 0, 1)
         pdf.cell(0, 6, f"Vehículo Matrícula: {vehicle.plate}", 0, 1)
         pdf.cell(0, 6, f"Tipo de Vehículo:   {vehicle.type.name}", 0, 1)
         pdf.ln(3)

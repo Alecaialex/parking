@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, after_this_request, send_from_directory, Markup
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, after_this_request, send_from_directory
 from parking_manager import ParkingManager
 from vehicle import VehicleType
 from typing import Optional
