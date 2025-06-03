@@ -266,6 +266,7 @@ class ParkingManager:
         """Cierra la conexión a la base de datos."""
         if self.conn:
             self.conn.close()
+            self.conn = None # Establecer a None después de cerrar
 
     def get_current_occupancy(self) -> int:
         """Devuelve el número actual de vehículos en el parking."""

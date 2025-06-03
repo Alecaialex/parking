@@ -15,11 +15,69 @@ Este proyecto es un Sistema de Gestión de Parking desarrollado en Python utiliz
 *   Interfaz web.
 *   Almacenamiento de datos en SQLite.
 
-## 2. Estructura del Proyecto y Descripción de Archivos
+## 2. Cómo Ejecutar el Proyecto
+
+Sigue estos pasos para configurar y ejecutar el proyecto localmente:
+
+1.  **Clonar el repositorio** (si aún no lo has hecho):
+    ```bash
+    git clone https://github.com/Alecaialex/parking.git
+    cd parking
+    ```
+
+2.  **Crear un entorno virtual**:
+    ```bash
+    python -m venv env
+    ```
+
+3.  **Activar el entorno virtual**:
+    *   En Windows:
+        ```bash
+        .\env\Scripts\activate
+        ```
+    *   En macOS/Linux:
+        ```bash
+        source env/bin/activate
+        ```
+
+4.  **Instalar las dependencias**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+5.  **Configurar variables de entorno**:
+    Crea un archivo `.env` en la raíz del proyecto con las claves necesarias (consulta la sección 2.7 para más detalles).
+    ```dotenv
+    PLATE_RECOGNIZER_API_KEY="tu_clave_aqui"
+    FLASK_SECRET_KEY="una_clave_secreta_aleatoria"
+    ```
+
+6.  **Ejecutar la aplicación Flask**:
+    ```bash
+    flask run
+    ```
+    La aplicación estará disponible en `http://127.0.0.1:5000/`.
+
+## 3. Estructura del Proyecto y Descripción de Archivos
+
+Este proyecto es un Sistema de Gestión de Parking desarrollado en Python utilizando Flask para la interfaz web. Permite administrar las entradas y salidas de vehículos por diferentes métodos, calcular las tarifas de estacionamiento, generar facturas en PDF, y visualizar el estado actual del parking y el historial de vehículos, además de exportarlo.
+
+**Características Principales:**
+
+*   Registro de entrada y salida de vehículos (manual y por webcam)
+*   Cálculo de tarifas basado en el tipo de vehículo y la duración de la estancia.
+*   Generación de facturas en PDF al registrar la salida.
+*   Visualización de vehículos actualmente en el parking.
+*   Historial de todos los vehículos que han utilizado el parking..
+*   Exportación del historial de vehículos a CSV.
+*   Interfaz web.
+*   Almacenamiento de datos en SQLite.
+
+## 4. Estructura del Proyecto y Descripción de Archivos
 
 A continuación se explica la función de cada archivo principal dentro del proyecto:
 
-### 2.1. `app.py`
+### 4.1. `app.py`
 
 Es el archivo principal para la aplicación Flask. Define las rutas, maneja las solicitudes HTTP, interactúa con `ParkingManager` para la lógica del sistema, y renderiza las plantillas HTML para la UI web.
 
@@ -86,7 +144,8 @@ Es el archivo principal para la aplicación Flask. Define las rutas, maneja las 
     *   **Función**: Sirve los archivos PDF de las facturas generadas. Permite a los usuarios descargar o visualizar las facturas a través de un enlace.
     *   **Acción**: Descarga de archivo PDF
 
-### 2.2. `parking_manager.py`
+
+### 4.2. `parking_manager.py`
 
 Este archivo contiene la clase `ParkingManager`, que encapsula toda la lógica de negocio y las interacciones con la base de datos SQLite. Es el núcleo del sistema de gestión del parking.
 
@@ -160,7 +219,7 @@ Este archivo contiene la clase `ParkingManager`, que encapsula toda la lógica d
     *   **Función**: Obtiene y formatea los datos del historial de vehículos para ser utilizados por la aplicación Flask.
     *   **Return**: `list` de `dict`, donde cada diccionario representa un registro del historial.
 
-### 2.3. `vehicle.py`
+### 4.3. `vehicle.py`
 
 Define las estructuras de datos para los vehículos y sus tipos.
 
@@ -183,7 +242,7 @@ Define las estructuras de datos para los vehículos y sus tipos.
     *   **`calculate_parking_duration_in_minutes(self) -> int`**: Calcula la duración de la estancia en minutos. Si `check_out_time` no está definido, usa la hora actual.
     *   **`calculate_parking_fee(self) -> float`**: Calcula la tarifa total de estacionamiento basándose en la duración y la tarifa horaria del tipo de vehículo.
 
-### 2.4. `plate_recognizer.py`
+### 4.4. `plate_recognizer.py`
 
 Maneja la funcionalidad de reconocimiento de matrículas utilizando la webcam y la API "Plate Recognizer".
 
@@ -194,7 +253,7 @@ Maneja la funcionalidad de reconocimiento de matrículas utilizando la webcam y 
 *   **Configuración**: Requiere una `PLATE_RECOGNIZER_API_KEY` configurada en las variables de entorno (`.env`).
 *   **Return**: La matrícula reconocida como una cadena de texto, o `None` si no se reconoce, se cancela, o hay un error.
 
-### 2.5. `main.py`
+### 4.5. `main.py`
 
 Proporciona una interfaz de línea de comandos (CLI) para interactuar con el sistema de parking. Versión anterior a la interfaz web con Flask.
 
@@ -208,7 +267,7 @@ Proporciona una interfaz de línea de comandos (CLI) para interactuar con el sis
     *   **Función**: Bucle principal. Muestra un menú con opciones (registrar entrada/salida, ver vehículos, ver historial, exportar CSV, registrar entrada con webcam, salir).
     *   **Interacción**: Lee la entrada del usuario y llama a los métodos correspondientes de `ParkingManager`.
 
-### 2.6. Plantillas HTML (`templates/`)
+### 4.6. Plantillas HTML (`templates/`)
 
 Estos archivos definen la estructura y presentación de las páginas web de la aplicación. Utilizan el motor de plantillas Jinja2.
 
@@ -219,7 +278,7 @@ Estos archivos definen la estructura y presentación de las páginas web de la a
 *   **`index.html`**: Página de inicio, muestra la capacidad y ocupación del parking.
 *   **`vehicle_history.html`**: Muestra una tabla con el historial de vehículos que han utilizado el parking.
 
-### 2.7. `.env`
+### 4.7. `.env`
 
 Archivo de configuración para variables de entorno.
 
@@ -228,7 +287,7 @@ Archivo de configuración para variables de entorno.
 *   **`PLATE_RECOGNIZER_API_KEY`**: Clave necesaria para usar la API de Plate Recognizer.
 *   **`FLASK_SECRET_KEY`**: Clave secreta utilizada por Flask para firmar sesiones y otros fines de seguridad.
 
-### 2.8. `requirements.txt`
+### 4.8. `requirements.txt`
 
 Lista las dependencias de Python del proyecto, necesarias para su ejecución.
 
@@ -236,11 +295,11 @@ Lista las dependencias de Python del proyecto, necesarias para su ejecución.
 
 Permite instalar todas las dependencias fácilmente con `pip install -r requirements.txt`.
 
-### 2.9. `static/style.css`
+### 4.9. `static/style.css`
 
 Archivo CSS de la aplicación web.
 
-### 2.10. `test_vehicle.py`
+### 4.10. `test_vehicle.py`
 
 Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
 
@@ -257,16 +316,16 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
     *   `test_calculate_parking_fee_zero_duration()`: Prueba tarifa con duración cero.
     *   `test_calculate_parking_fee_negative_duration_scenario()`: Prueba tarifa con duración negativa (debería ser 0).
 
-## 3. Flujo del Programa
+## 5. Flujo del Programa
 
-### 3.1. Ver Página de Inicio
+### 5.1. Ver Página de Inicio
 
 1.  Usuario accede a la URL raíz (`/`).
 2.  **`app.py`**: La ruta `/` llama a la función `index()`.
 3.  **`index()`**: Llama a `parking_manager.capacity` y `parking_manager.get_current_occupancy()` para obtener el estado actual.
 4.  **`index()`**: Renderiza `templates/index.html`, pasando los datos de capacidad y ocupación.
 
-### 3.2. Registrar Entrada de Vehículo (Manual)
+### 5.2. Registrar Entrada de Vehículo (Manual)
 
 1.  Usuario navega a "Registrar Entrada" (`/check_in`).
 2.  **`app.py`**: La ruta `/check_in` (método GET) llama a `check_in()`.
@@ -284,7 +343,7 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
     *   Establece un mensaje flash (éxito/error).
     *   Redirige al usuario a la página de inicio (`/`).
 
-### 3.3. Registrar Entrada de Vehículo (Webcam)
+### 5.3. Registrar Entrada de Vehículo (Webcam)
 
 1.  Usuario navega a "Entrada (Webcam)" (`/check_in_webcam`).
 2.  **`app.py`**: La ruta `/check_in_webcam` (método GET) llama a `check_in_webcam()`.
@@ -301,7 +360,7 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
 4.  Usuario (si se reconoció matrícula) selecciona el tipo de vehículo en el formulario pre-rellenado y lo envía.
 5.  El flujo continúa como en el paso 5 de "Registrar Entrada de Vehículo (Manual)".
 
-### 3.4. Registrar Salida de Vehículo (Manual)
+### 5.4. Registrar Salida de Vehículo (Manual)
 
 1.  Usuario navega a "Registrar Salida" (`/check_out`).
 2.  **`app.py`**: La ruta `/check_out` (método GET) llama a `check_out()`.
@@ -322,7 +381,7 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
     *   Establece mensajes flash: uno para el resultado general y otro con el enlace a la factura (usando `Markup`) si se generó.
     *   Redirige al usuario a la página de origen (por defecto, `/`).
 
-### 3.5. Registrar Salida de Vehículo (Webcam)
+### 5.5. Registrar Salida de Vehículo (Webcam)
 
 1.  Usuario navega a "Salida (Webcam)" (`/check_out_webcam`).
 2.  **`app.py`**: La ruta `/check_out_webcam` (método GET) llama a `check_out_webcam()`.
@@ -337,7 +396,7 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
 4.  Usuario (si se reconoció matrícula) confirma la salida enviando el formulario pre-rellenado.
 5.  El flujo continúa como en el paso 5 de "Registrar Salida de Vehículo (Manual)".
 
-### 3.6. Ver Vehículos Actuales
+### 5.6. Ver Vehículos Actuales
 
 1.  Usuario navega a "Vehículos Actuales" (`/current_vehicles`).
 2.  **`app.py`**: La ruta `/current_vehicles` llama a `current_vehicles_route()`.
@@ -345,14 +404,14 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
 4.  **`current_vehicles_route()`**: Renderiza `templates/current_vehicles.html`, pasando la lista de vehículos.
 5.  El navegador muestra la tabla. Cada fila tiene un botón "Registrar Salida" que es un formulario POST a `/check_out` con la matrícula del vehículo y `source_page_route`="current_vehicles_route".
 
-### 3.7. Ver Historial de Vehículos
+### 5.7. Ver Historial de Vehículos
 
 1.  Usuario navega a "Historial" (`/history`).
 2.  **`app.py`**: La ruta `/history` llama a `history_route()`.
 3.  **`history_route()`**: Llama a `parking_manager.get_vehicle_history_data()` para obtener el historial.
 4.  **`history_route()`**: Renderiza `templates/vehicle_history.html`, pasando los datos del historial.
 
-### 3.8. Exportar Historial a CSV
+### 5.8. Exportar Historial a CSV
 
 1.  Usuario navega a "Exportar CSV" (`/export_csv`).
 2.  **`app.py`**: La ruta `/export_csv` llama a `export_csv()`.
@@ -363,7 +422,7 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
     *   Si el archivo se generó y existe, usa `send_file()` para enviarlo al navegador para su descarga.
     *   Si hay error o no hay datos, muestra un mensaje flash y redirige a `/`.
 
-### 3.9. Descargar Factura
+### 5.9. Descargar Factura
 
 1.  Después de un `check_out` exitoso, se muestra un mensaje flash con un enlace a la factura (ej. `/invoices/factura_PLATE_FECHA.pdf`).
 2.  Usuario hace clic en el enlace.
