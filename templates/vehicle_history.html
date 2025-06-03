@@ -17,7 +17,7 @@
         {% for record in history %}
         <tr>
             <td>{{ record.plate }}</td>
-            <td>{{ record.vehicle_type_name }}</td> {# Asume que ParkingManager añade este campo #}
+            <td>{{ record.vehicle_type_name }}</td>
             <td>{{ record.check_in_time }}</td>
             <td>{{ record.check_out_time if record.check_out_time else 'N/A' }}</td>
             <td>€{{ "%.2f"|format(record.total_cost) if record.total_cost is not none else 'N/A' }}</td>

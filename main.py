@@ -1,16 +1,11 @@
 from typing import Optional
 from parking_manager import ParkingManager
 from vehicle import VehicleType
-try:
-    from plate_recognizer import recognize_plate_from_webcam_api as recognize_plate_from_webcam
-except ImportError: # Manejar caso donde dependencias de OCR no estén instaladas
-    recognize_plate_from_webcam = None
+from plate_recognizer import recognize_plate_from_webcam_api as recognize_plate_from_webcam
 
 def ask_vehicle_type() -> Optional[VehicleType]:
-    """
-    Obtiene y muestra al usuario las opciones de tipo de vehículo y solicita una selección, luego la devuelve
-    Si la entrada no es válida, devuelve None, cancelando la selección
-    """
+    """Obtiene y muestra al usuario las opciones de tipo de vehículo y solicita una selección, luego la devuelve
+    Si la entrada no es válida, devuelve None, cancelando la selección"""
     print("Seleccione el tipo de vehículo:")
     vehicle_types = list(VehicleType)
     for i, vt in enumerate(vehicle_types):

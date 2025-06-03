@@ -24,7 +24,6 @@
                         <td>
                             <form action="{{ url_for('check_out') }}" method="POST" style="display:inline;">
                                 <input type="hidden" name="plate" value="{{ vehicle.plate }}">
-                                <!-- Enviamos el nombre de la ruta actual para poder redirigir de vuelta aquí -->
                                 <input type="hidden" name="source_page_route" value="current_vehicles_route">
                                 <button type="submit" onclick="return confirm('¿Estás seguro de que quieres registrar la salida de este vehículo?');">Registrar Salida</button>
                             </form>
@@ -36,8 +35,5 @@
         {% else %}
             <p>No hay vehículos actualmente en el parking.</p>
         {% endif %}
-        <!-- El botón de "Volver al Menú Principal" ya no es tan necesario con la barra de navegación, pero puedes dejarlo si quieres -->
-        <!-- <br> -->
-        <!-- <a href="{{ url_for('index') }}" class="button">Volver al Menú Principal</a> -->
     </div>
 {% endblock %}

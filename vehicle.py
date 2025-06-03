@@ -14,16 +14,11 @@ class VehicleType(Enum):
         return self.value
 
 class Vehicle:
-    """
-    Atributos de la clase Vehicle::
+    """Atributos de la clase Vehicle::
         plate str: La matrícula del vehículo
         type VehicleType: El tipo de vehículo
         check_in_time int: La hora en que el vehículo entró al parking (ms desde la época)
-        check_out_time Optional[int]: La hora en que el vehículo salió del parking (ms desde la época)
-    """
-    MILLISECONDS_IN_MINUTE = 60 * 1000
-    MINUTES_IN_HOUR_DOUBLE = 60.0
-
+        check_out_time Optional[int]: La hora en que el vehículo salió del parking (ms desde la época)"""
     def __init__(self, plate: str, vehicle_type: VehicleType, check_in_time: int, check_out_time: Optional[int] = None):
         self.plate: str = plate
         self.type: VehicleType = vehicle_type
@@ -31,14 +26,12 @@ class Vehicle:
         self.check_out_time: Optional[int] = check_out_time
 
     def calculate_parking_duration_in_minutes(self) -> int:
-        """
-        Calcula la duración de la estancia en minutos.
+        """Calcula la duración de la estancia en minutos.
         Si check_out_time es None, usa la hora actual
-        para calcular la duración actual.
-        """
+        para calcular la duración actual."""
         end_time = self.check_out_time if self.check_out_time is not None else int(time.time() * 1000)
         duration_millis = end_time - self.check_in_time
-        return int(duration_millis / self.MILLISECONDS_IN_MINUTE) if duration_millis >= 0 else 0
+        return int(duration_millis / 60000) if duration_millis >= 0 else 0
 
     def calculate_parking_fee(self) -> float:
         """Calcula la tarifa total de estacionamiento."""

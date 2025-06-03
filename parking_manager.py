@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 import csv
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple
 import sqlite3
 from fpdf import FPDF
 import os

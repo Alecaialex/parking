@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, after_this_request, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, send_from_directory
 from markupsafe import Markup
 from dotenv import load_dotenv
 import os
