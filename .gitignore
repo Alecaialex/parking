@@ -1,3 +1,8 @@
 __pycache__/
+*.pyc
+venv/
 env/
-/__pycache__
+logs/
+invoices/
+parking_system.db
+*.csv

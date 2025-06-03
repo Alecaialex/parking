@@ -3,9 +3,8 @@ from datetime import datetime
 import csv
 from typing import Optional, Tuple, List, Dict
 import sqlite3
-from fpdf import FPDF # Importar FPDF
-import os # Necesario para crear el directorio de facturas
-
+from fpdf import FPDF
+import os
 from vehicle import Vehicle, VehicleType
 
 
@@ -60,7 +59,7 @@ class ParkingManager:
             return None
         
     def check_capacity(self) -> bool:
-        """Verifica si hay capacidad disponible en el parking."""
+        """Comprueba si hay espacio disponible en el parking."""
         self.cursor.execute("SELECT COUNT(*) FROM parked_vehicles")
         current_count = self.cursor.fetchone()[0]
         return not current_count >= self.capacity
@@ -80,17 +79,15 @@ class ParkingManager:
             )
             self.conn.commit()
             check_in_dt = datetime.fromtimestamp(check_in_time_millis / 1000)
-            return f"Vehículo {plate} ({vehicle_type.name}) registrada. Hora de entrada: {check_in_dt.strftime(self.date_format_str)}"
+            return f"Vehículo {plate} ({vehicle_type.name}) registrado. Hora de entrada: {check_in_dt.strftime(self.date_format_str)}"
         except sqlite3.Error as e:
             return f"Error de base de datos al registrar entrada: {e}"
 
     def _generate_invoice_pdf(self, filepath: str, vehicle: Vehicle, fee: float, check_in_dt: datetime, check_out_dt: datetime, duration_minutes: int) -> bool:
-        """
-        Genera una factura PDF.
-        """
+        """ Genera la factura en PDF."""
         pdf = FPDF()
         pdf.add_page()
-        euro_symbol = chr(128) # Símbolo del Euro para FPDF con fuentes estándar
+        euro_symbol = chr(128) # Símbolo del Euro para FPDF
         
         # Encabezado de la Factura
         pdf.set_font("Arial", "B", 16)
@@ -111,8 +108,10 @@ class ParkingManager:
 
         # Detalles del Servicio
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 6, "DETALLES DEL SERVICIO:", 0, 1) # TODO: Considerar parametrizar cliente y empleado
+        pdf.cell(0, 6, "DETALLES DEL SERVICIO:", 0, 1)
         pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 6, "Cliente: José Luis Ábalos", 0, 1)
+        pdf.cell(0, 6, "Empleada: Jessica Rodríguez", 0, 1)
         pdf.cell(0, 6, f"Vehículo Matrícula: {vehicle.plate}", 0, 1)
         pdf.cell(0, 6, f"Tipo de Vehículo:   {vehicle.type.name}", 0, 1)
         pdf.ln(3)
@@ -141,28 +140,20 @@ class ParkingManager:
             print(f"Error al generar el PDF de la factura {filepath}: {e}")
             return False
 
-    def check_out_vehicle(self, plate: str) -> Tuple[str, Optional[float], Optional[str]]:
-        """
-        Registra la salida de un vehículo, calcula coste y genera factura.
-        Args:
-            plate: La matrícula del vehículo a retirar.
-        Returns:
-            Una tupla: (mensaje_resultado, tarifa_calculada, nombre_archivo_factura_generada)
-        """
+    def check_out_vehicle(self, plate: str) -> Tuple[str, Optional[str]]:
+        """Registra la salida de un vehículo, calcula coste y genera factura. Devuelve el mensaje de exito o error, y el nombre del archivo de la factura si se generó correctamente."""
         self.cursor.execute("SELECT plate, vehicle_type_name, check_in_time FROM parked_vehicles WHERE plate = ?", (plate,))
         row = self.cursor.fetchone()
 
         if not row:
-            print(f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.")
-            return f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.", None, None
+            return f"Error: El vehículo con matrícula {plate} no se encuentra en el parking.", None
     
         db_plate, db_vehicle_type_name, db_check_in_time = row
         try:
             vehicle_type_enum = VehicleType[db_vehicle_type_name]
         except KeyError:
             error_msg = f"Error: Tipo de vehículo desconocido '{db_vehicle_type_name}' para la matrícula {db_plate} al salir."
-            print(error_msg) # Log para consola/servidor
-            return error_msg, None, None
+            return error_msg, None
 
         current_check_out_time = int(time.time() * 1000)
         vehicle_obj = Vehicle(db_plate, vehicle_type_enum, db_check_in_time, current_check_out_time)
@@ -189,19 +180,17 @@ class ParkingManager:
                 f"  Coste: €{fee:.2f}"
             )
 
-            # Generar y guardar la factura
             invoice_filename = f"factura_{plate}_{check_out_dt.strftime('%Y%m%d_%H%M%S')}.pdf"
             invoice_filepath = os.path.join(self.invoices_dir, invoice_filename)
             generated_invoice_name = None
             
             if self._generate_invoice_pdf(invoice_filepath, vehicle_obj, fee, check_in_dt, check_out_dt, duration_minutes):
-                message += f"\nFactura PDF generada: {invoice_filename}"
                 generated_invoice_name = invoice_filename
             else:
                 message += f"\nError al generar la factura PDF."
-            return message, fee, generated_invoice_name
+            return message, generated_invoice_name
         except sqlite3.Error as e:
-            self.conn.rollback() # Revertir cambios si algo falla
+            self.conn.rollback()
             return f"Error de base de datos al registrar salida: {e}", None, None
 
     def get_current_vehicles(self):
@@ -241,13 +230,7 @@ class ParkingManager:
         print("------------------------------")
 
     def export_history_to_csv(self, filename: str = "historial.csv") -> Optional[str]:
-        """
-        Exporta el historial de vehículos a un archivo CSV.
-        Args: 
-            filename (str): El nombre del archivo CSV a crear.
-        Returns:
-            Optional[str]: La ruta al archivo CSV si la exportación fue exitosa, None en caso contrario.
-        """
+        """Exporta el historial de vehículos a un archivo CSV."""
         self.cursor.execute(
             "SELECT plate, vehicle_type_name, check_in_time, check_out_time, duration_minutes, fee FROM vehicle_history ORDER BY check_out_time ASC"
         )
@@ -256,7 +239,6 @@ class ParkingManager:
         if not rows:
             return None
 
-        # Definir los encabezados para el archivo CSV
         headers = ["Matricula", "TipoVehiculo", "HoraEntrada", "HoraSalida", "DuracionMinutos", "CosteEuros"]
         csv_date_format = "%Y-%m-%d %H:%M:%S" 
 
@@ -273,12 +255,11 @@ class ParkingManager:
                         datetime.fromtimestamp(check_in_time / 1000).strftime(csv_date_format),
                         datetime.fromtimestamp(check_out_time / 1000).strftime(csv_date_format),
                         duration_minutes,
-                        f"{fee:.2f}" # Formatear coste a dos decimales.
-                    ] # type: ignore
+                        f"{fee:.2f}"
+                    ]
                     writer.writerow(row)
             return filename
         except IOError as e:
-            # El manejo de errores (ej. flash message) se hará en la capa de la aplicación (Flask)
             return None
         
     def close_db(self):
@@ -286,7 +267,6 @@ class ParkingManager:
         if self.conn:
             self.conn.close()
 
-    # --- Métodos adicionales para Flask ---
     def get_current_occupancy(self) -> int:
         """Devuelve el número actual de vehículos en el parking."""
         self.cursor.execute("SELECT COUNT(*) FROM parked_vehicles")

@@ -35,21 +35,13 @@ class Vehicle:
         Calcula la duración de la estancia en minutos.
         Si check_out_time es None, usa la hora actual
         para calcular la duración actual.
-
-        Returns:
-            int: La duración total del estacionamiento en minutos.
         """
         end_time = self.check_out_time if self.check_out_time is not None else int(time.time() * 1000)
         duration_millis = end_time - self.check_in_time
-        # Asegura que la duración no sea negativa
         return int(duration_millis / self.MILLISECONDS_IN_MINUTE) if duration_millis >= 0 else 0
 
     def calculate_parking_fee(self) -> float:
-        """
-        Calcula la tarifa total de estacionamiento.
-        Returns:
-            float: La tarifa total de estacionamiento.
-        """
+        """Calcula la tarifa total de estacionamiento."""
         duration_in_minutes = self.calculate_parking_duration_in_minutes()
         duration_in_hours = duration_in_minutes / 60.0
         return duration_in_hours * self.type.hourly_rate
