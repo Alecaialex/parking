@@ -316,6 +316,42 @@ Contiene pruebas unitarias para la clase `Vehicle` definida en `vehicle.py`.
     *   `test_calculate_parking_fee_zero_duration()`: Prueba tarifa con duración cero.
     *   `test_calculate_parking_fee_negative_duration_scenario()`: Prueba tarifa con duración negativa (debería ser 0).
 
+### 4.11. `test_parking_manager.py`
+
+Contiene pruebas unitarias para la clase `ParkingManager` definida en `parking_manager.py`. Utiliza `unittest.mock` para simular dependencias como `time.time()`, `os.makedirs`, `FPDF`, y la base de datos (usando `:memory:`).
+
+**Clase `TestParkingManager(unittest.TestCase)`:**
+
+*   **Función**: Verificar el correcto funcionamiento de los métodos de `ParkingManager`, incluyendo la gestión de capacidad, registro de entradas y salidas, generación de facturas, manejo de la base de datos, y exportación de datos.
+*   **Métodos de Prueba Principales**:
+    *   `setUp()`: Configura el entorno para cada prueba, incluyendo mocks y una base de datos en memoria.
+    *   `tearDown()`: Limpia después de cada prueba, deteniendo mocks y cerrando la base de datos.
+    *   Pruebas para `check_capacity()`, `check_in_vehicle()` (éxito, vehículo ya aparcado).
+    *   Pruebas para `check_out_vehicle()` (éxito, vehículo no encontrado, tipo desconocido en BD, fallo en generación de PDF).
+    *   Pruebas para `_generate_invoice_pdf()` (éxito, fallo por excepción).
+    *   Pruebas para `get_current_vehicles()` y `get_current_vehicles_data()` (vacío, con datos).
+    *   Pruebas para `get_vehicle_history()` y `get_vehicle_history_data()` (vacío, con datos).
+    *   Pruebas para `export_history_to_csv()` (éxito, sin datos, error de E/S).
+    *   Pruebas para `_vehicle_from_row()` (aparcado, historial, tipo desconocido).
+    *   Pruebas para `get_current_occupancy()` y `close_db()`.
+
+### 4.12. `test_main.py`
+
+Contiene pruebas unitarias para las funciones del script `main.py` (la interfaz de línea de comandos). Utiliza `unittest.mock` para simular `input()`, `print()`, `ParkingManager`, y `recognize_plate_from_webcam`.
+
+**Clase `TestMainCLI(unittest.TestCase)`:**
+
+*   **Función**: Verificar el comportamiento de la CLI, incluyendo la selección de opciones del menú, la entrada de datos del usuario y la interacción con `ParkingManager` y el reconocimiento de matrículas.
+*   **Métodos de Prueba Principales**:
+    *   Pruebas para `ask_vehicle_type()` (selección válida, inválida).
+    *   Pruebas para el flujo principal `main()` simulando diferentes interacciones del usuario:
+        *   Registro de entrada (éxito, parking lleno, matrícula vacía, tipo inválido).
+        *   Registro de salida.
+        *   Visualización de vehículos actuales e historial.
+        *   Exportación a CSV.
+        *   Registro de entrada con webcam (éxito, fallo en reconocimiento).
+        *   Salida del programa y opción de menú inválida.
+
 ## 5. Flujo del Programa
 
 ### 5.1. Ver Página de Inicio
